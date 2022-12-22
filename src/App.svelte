@@ -1,5 +1,28 @@
 <script lang="ts">
+	import { fly, slide, blur, scale, fade } from "svelte/transition";
 	let flipped = false;
+	let holderName = "";
+	$: nameDisplay = holderName == "" ? "Full name" : holderName;
+	let year = 2022;
+	let month = 1;
+	let creditNumber;
+	$: numArray = `${creditNumber || ""}`.split("");
+	$: creditDisplay = "#### #### #### ####".split(" ").map((group, gI) => [
+		...group.split("").map((g, cI) => {
+			let index = gI * 4 + cI;
+			let value = numArray[index];
+			if (!value) {
+				value = "#";
+			}
+			return value;
+		}),
+	]);
+
+	let cw: number;
+	$: cwDisplay = `${cw || ""}`.split("");
+	$: yearDisplay = ("" + year).substring(2, 4);
+	$: monthDisplay = month < 10 ? "0" + month : month;
+	$: nameList = nameDisplay.split("");
 </script>
 
 <main>
@@ -12,22 +35,64 @@
 						<img src="/visa.png" alt="" class="visa" />
 					</div>
 					<div class="credit-card--number">
-						<span class="group">####</span>
-						<span class="group">####</span>
-						<span class="group">####</span>
-						<span class="group">####</span>
+						{#each creditDisplay as creditGroup, parentIndex (parentIndex)}
+							<span class="group">
+								{#each creditGroup as creditNumber, childIndex (childIndex)}
+									<span class="credit-number-container">
+										<span class="credit-num" in:fade>
+											{creditNumber}
+										</span>
+									</span>
+								{/each}
+							</span>
+						{/each}
 					</div>
 					<div class="name-date">
 						<div class="name-field">
 							<span class="name-label">Card Holder</span>
-							<span class="name">Full Name</span>
+							<span class="name">
+								{#each nameList as spell, index (index)}
+									<span class="spell-container">
+										<span
+											in:fly={{ y: 20 }}
+											out:fly={{ y: -20 }}
+										>
+											{#if spell == ""}
+												" " &nbsp;
+											{:else}
+												{spell}
+											{/if}
+										</span>
+									</span>
+								{/each}
+							</span>
 						</div>
 						<div class="date-field">
 							<span class="date-label">Expire</span>
 							<div class="date-value">
-								<span class="month">23</span>
-								<span class="slash">/</span>
-								<span class="year">12</span>
+								<span class="month-container">
+									{#key monthDisplay}
+										<span
+											class="month"
+											in:fly={{ y: 10 }}
+											out:fly={{ y: -10 }}
+										>
+											{monthDisplay}
+										</span>
+									{/key}
+								</span>
+								<span class="month-container slash">
+									<span class="month" in:scale out:scale>
+										/
+									</span>
+								</span>
+								<span class="month-container">
+									{#key yearDisplay}
+										<span class="month" in:scale out:scale>
+											{yearDisplay}
+										</span>
+									{/key}
+								</span>
 							</div>
 						</div>
 					</div>
@@ -40,7 +105,11 @@
 						<span class="cw-label">CW</span>
 						<div class="cw-value">
 							<div class="cw-holder" />
-							<div class="four-digits">3456</div>
+							<div class="four-digits">
+								{#each cwDisplay as cwSpell, index (index)}
+									<span in:scale out:scale class="dot" />
+								{/each}
+							</div>
 						</div>
 					</div>
 					<div class="visa-logo">
@@ -52,36 +121,60 @@
 		<div class="form">
 			<div class="text-field">
 				<label for="cardNumber">Card Number</label>
-				<input pattern="(\d\d\d\d \d\d\d\d \d\d\d\d)" id="cardNumber" />
+				<input
+					bind:value={creditNumber}
+					type="number"
+					maxlength="16"
+					pattern="(\d\d\d\d \d\d\d\d \d\d\d\d)"
+					id="cardNumber"
+				/>
 			</div>
 			<div class="text-field">
 				<label for="cardHolder">Card Holder</label>
-				<input type="text" name="" id="cardHolder" />
+				<input
+					bind:value={holderName}
+					type="text"
+					name=""
+					id="cardHolder"
+				/>
 			</div>
 			<div class="expiration-container">
 				<div class="text-field">
 					<label for="exp-date">Expiration Date</label>
-					<select name="" placeholder="Month" id="exp-date">
-						{#each [...Array(31)] as date, index (index)}
+					<select
+						bind:value={month}
+						name=""
+						placeholder="Month"
+						id="exp-date"
+					>
+						{#each [...Array(12)] as month, index (index)}
 							<option value={index + 1}>{index + 1}</option>
 						{/each}
 					</select>
 				</div>
 				<div class="text-field">
 					<label for="">&nbsp;</label>
-					<select placeholder="Year" id="exp-date">
-						{#each [...Array(12)] as date, index (index)}
-							<option>{index + 1}</option>
+					<select bind:value={year} placeholder="Year" id="exp-date">
+						{#each [...Array(20)] as year, index (index)}
+							<option>{index + 2010}</option>
 						{/each}
 					</select>
 				</div>
 
 				<div class="text-field">
 					<label for="cw">CW</label>
-					<input type="text" maxlength="4" name="" id="cw" />
+					<input
+						on:focus={() => (flipped = true)}
+						on:blur={() => (flipped = false)}
+						bind:value={cw}
+						type="text"
+						maxlength="4"
+						name=""
+						id="cw"
+					/>
 				</div>
 			</div>
-			<button on:click={() => (flipped = !flipped)}>submit</button>
+			<button>submit</button>
 		</div>
 	</div>
 </main>
@@ -101,6 +194,8 @@
 		display: flex;
 		flex-direction: column;
 		align-items: center;
+		perspective: 1000px;
+		perspective-origin: top;
 
 		.credit-card {
 			position: relative;
@@ -153,7 +248,7 @@
 						justify-content: space-between;
 
 						img {
-							width: 40px;
+							width: 50px;
 						}
 					}
 
@@ -164,6 +259,27 @@
 						font-weight: bold;
 						justify-content: space-evenly;
 						align-items: center;
+
+						.group {
+							display: flex;
+							.credit-number-container {
+								position: relative;
+								width: 17px;
+								height: 30px;
+
+								.credit-num {
+									position: absolute;
+									top: 0;
+									bottom: 0;
+									right: 0;
+									left: 0;
+
+									display: flex;
+									align-items: center;
+									justify-content: center;
+								}
+							}
+						}
 					}
 					.name-date {
 						display: flex;
@@ -174,14 +290,37 @@
 							flex-direction: column;
 
 							.name-label {
-								font-size: 14px;
+								font-size: 11px;
 								margin-bottom: 3px;
 							}
 
 							.name {
 								font-weight: bold;
 								text-transform: uppercase;
-								font-size: 16px;
+								font-size: 14px;
+								display: flex;
+
+								.spell-container {
+									position: relative;
+									width: 13px;
+									height: 20px;
+									overflow: hidden;
+
+									span {
+										position: absolute;
+										left: 0;
+										right: 0;
+										bottom: 0;
+										top: 0;
+										display: flex;
+										align-items: center;
+										justify-content: center;
+									}
+								}
+
+								span {
+									white-space: pre;
+								}
 							}
 						}
 						.date-field {
@@ -189,14 +328,37 @@
 							flex-direction: column;
 
 							.date-label {
-								font-size: 14px;
+								font-size: 11px;
 								margin-bottom: 3px;
 							}
 
 							.date-value {
+								display: flex;
+								justify-content: space-around;
 								font-weight: bold;
 								text-transform: uppercase;
-								font-size: 16px;
+
+								.month-container {
+									position: relative;
+									width: 25px;
+									height: 20px;
+									overflow: hidden;
+
+									&.slash {
+										width: 10px;
+									}
+
+									.month {
+										position: absolute;
+										left: 0;
+										right: 0;
+										bottom: 0;
+										top: 0;
+										display: flex;
+										align-items: center;
+										justify-content: center;
+									}
+								}
 							}
 						}
 					}
@@ -242,8 +404,9 @@
 
 						.cw-label {
 							align-self: flex-end;
-							font-size: 14px;
+							font-size: 12px;
 							margin-bottom: 5px;
+							font-weight: bold;
 						}
 
 						.cw-value {
@@ -251,6 +414,25 @@
 							background-color: white;
 							padding: 8px;
 							width: 100%;
+							display: flex;
+							align-items: center;
+							height: 30px;
+
+							.cw-holder {
+								flex: 1;
+							}
+
+							.four-digits {
+								display: flex;
+								.dot {
+									width: 5px;
+									height: 5px;
+									display: block;
+									background-color: black;
+									border-radius: 100%;
+									margin: 0 3px;
+								}
+							}
 						}
 					}
 
@@ -309,7 +491,7 @@
 					}
 
 					&#cw {
-						width: 50px;
+						width: 100px;
 					}
 				}
 			}
